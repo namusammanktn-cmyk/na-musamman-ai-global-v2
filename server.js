@@ -165,7 +165,15 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-app.get("*", (_req, res) => {
+/*
+  IMPORTANT:
+  Express 5 does not support app.get("*")
+  in the old Express 4 style.
+
+  We use app.use() instead.
+*/
+
+app.use((_req, res) => {
   res.sendFile(
     path.join(
       __dirname,
