@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>NA MUSAMMAN AI GLOBAL</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #07152f;
+      color: white;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* SIDEBAR */
+
+    .sidebar {
+      width: 280px;
+      background: #061126;
+      border-right: 1px solid #16335f;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      font-size: 18px;
+      font-weight: bold;
+      color: #28c7ff;
+      margin-bottom: 20px;
+    }
+
+    .new-chat {
+      border: 1px solid #1c5b86;
+      background: #0a2042;
+      color: white;
+      padding: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 18px;
+    }
+
+    .history-title {
+      color: #8da6c8;
+      font-size: 12px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .history {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      padding: 10px;
+      border-radius: 8px;
+      color: #dbe8f7;
+      cursor: pointer;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item:hover {
+      background: #0d2447;
+    }
+
+    .login-btn {
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: white;
+      color: #111;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* MAIN */
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      height: 65px;
+      border-bottom: 1px solid #16335f;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+    }
+
+    .menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 25px;
+      cursor: pointer;
+    }
+
+    .title {
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    .settings {
+      background: #0b2245;
+      border: 1px solid #1a4774;
+      color: white;
+      border-radius: 9px;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    /* CHAT */
+
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 25px;
+    }
+
+    .welcome {
+      max-width: 700px;
+      margin: 80px auto;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 30px;
+      color: #27c9ff;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #9eb4d2;
+      line-height: 1.6;
+    }
+
+    .message {
+      max-width: 850px;
+      margin: 0 auto 18px auto;
+      padding: 14px 17px;
+      border-radius: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      background: #123865;
+    }
+
+    .assistant {
+      background: #0a1e3b;
+      border: 1px solid #163c68;
+    }
+
+    .message img {
+      max-width: 280px;
+      max-height: 280px;
+      border-radius: 12px;
+      display: block;
+      margin-top: 10px;
+    }
+
+    /* INPUT */
+
+    .composer-area {
+      padding: 12px 18px 18px;
+    }
+
+    .preview {
+      max-width: 850px;
+      margin: 0 auto 8px;
+      position: relative;
+      display: none;
+    }
+
+    .preview img {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid #278ac0;
+    }
+
+    .remove-image {
+      position: absolute;
+      top: -7px;
+      left: 78px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: none;
+      background: #e53935;
+      color: white;
+      cursor: pointer;
+    }
+
+    .composer {
+      max-width: 850px;
+      margin: auto;
+      background: #0b2245;
+      border: 1px solid #1a4774;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      gap: 6px;
+    }
+
+    .composer textarea {
+      flex: 1;
+      resize: none;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: white;
+      padding: 10px;
+      min-height: 42px;
+      max-height: 130px;
+      font-size: 15px;
+    }
+
+    .composer textarea::placeholder {
+      color: #7792b5;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: #b8d3ef;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover {
+      background: #12345f;
+    }
+
+    .send-btn {
+      background: #159bd2;
+      color: white;
+    }
+
+    .send-btn:hover {
+      background: #0d82b5;
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    /* MOBILE */
+
+    @media (max-width: 700px) {
+      .sidebar {
+        position: fixed;
+        z-index: 20;
+        left: -290px;
+        top: 0;
+        bottom: 0;
+        transition: 0.25s;
+      }
+
+      .sidebar.open {
+        left: 0;
+      }
+
+      .menu-btn {
+        display: block;
+      }
+
+      .title {
+        margin-right: auto;
+        margin-left: 10px;
+      }
+
+      .chat {
+        padding: 15px;
+      }
+
+      .welcome {
+        margin: 60px auto;
+      }
+
+      .logo {
+        font-size: 24px;
+      }
+
+      .composer-area {
+        padding: 8px;
+      }
+
+      .composer {
+        border-radius: 14px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+
+  <aside class="sidebar" id="sidebar">
+
+    <div class="brand">
+      NA MUSAMMAN AI GLOBAL
+    </div>
+
+    <button class="new-chat" id="newChat">
+      + New Chat
+    </button>
+
+    <div class="history-title">
+      Chat History
+    </div>
+
+    <div class="history" id="history"></div>
+
+    <button class="login-btn" id="loginBtn">
+      Continue with Google
+    </button>
+
+  </aside>
+
+  <!-- MAIN -->
+
+  <main class="main">
+
+    <header class="topbar">
+
+      <button class="menu-btn" id="menuBtn">
+        ☰
+      </button>
+
+      <div class="title">
+        ✦ AI ASSISTANT
+      </div>
+
+      <button class="settings" id="settingsBtn">
+        ⚙️
+      </button>
+
+    </header>
+
+    <!-- CHAT -->
+
+    <section class="chat" id="chat">
+
+      <div class="welcome" id="welcome">
+
+        <div class="logo">
+          NA MUSAMMAN AI GLOBAL
+        </div>
+
+        <p class="subtitle">
+          Your multilingual AI assistant.<br />
+          Ask questions, upload images, study,
+          translate, summarize and create content.
+        </p>
+
+      </div>
+
+    </section>
+
+    <!-- COMPOSER -->
+
+    <div class="composer-area">
+
+      <div class="preview" id="preview">
+
+        <img id="previewImage" alt="Selected image" />
+
+        <button
+          class="remove-image"
+          id="removeImage"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <div class="composer">
+
+        <input
+          type="file"
+          id="imageInput"
+          accept="image/*"
+        />
+
+        <button
+          class="icon-btn"
+          id="uploadBtn"
+          title="Upload image"
+        >
+          📎
+        </button>
+
+        <textarea
+          id="message"
+          placeholder="Message NA MUSAMMAN AI GLOBAL..."
+          rows="1"
+        ></textarea>
+
+        <button
+          class="icon-btn"
+          id="voiceBtn"
+          title="Voice input"
+        >
+          🎤
+        </button>
+
+        <button
+          class="icon-btn send-btn"
+          id="sendBtn"
+          title="Send"
+        >
+          ➤
+        </button>
+
+      </div>
+
+    </div>
+
+  </main>
+
+</div>
+
+<script>
+  const chat = document.getElementById("chat");
+  const welcome = document.getElementById("welcome");
+  const messageInput = document.getElementById("message");
+  const sendBtn = document.getElementById("sendBtn");
+
+  const uploadBtn = document.getElementById("uploadBtn");
+  const imageInput = document.getElementById("imageInput");
+
+  const preview = document.getElementById("preview");
+  const previewImage = document.getElementById("previewImage");
+  const removeImage = document.getElementById("removeImage");
+
+  const historyBox = document.getElementById("history");
+  const newChatBtn = document.getElementById("newChat");
+
+  const sidebar = document.getElementById("sidebar");
+  const menuBtn = document.getElementById("menuBtn");
+
+  const loginBtn = document.getElementById("loginBtn");
+  const settingsBtn = document.getElementById("settingsBtn");
+
+  let selectedImage = null;
+  let conversation = [];
+
+  // -----------------------------
+  // Mobile menu
+  // -----------------------------
+
+  menuBtn.onclick = () => {
+    sidebar.classList.toggle("open");
+  };
+
+  // -----------------------------
+  // Image upload
+  // -----------------------------
+
+  uploadBtn.onclick = () => {
+    imageInput.click();
+  };
+
+  imageInput.onchange = () => {
+
+    const file = imageInput.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+      selectedImage = reader.result;
+
+      previewImage.src = selectedImage;
+
+      preview.style.display = "block";
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  removeImage.onclick = () => {
+
+    selectedImage = null;
+
+    imageInput.value = "";
+
+    preview.style.display = "none";
+
+    previewImage.src = "";
+  };
+
+  // -----------------------------
+  // Add message to screen
+  // -----------------------------
+
+  function addMessage(
+    role,
+    text,
+    image = null
+  ) {
+
+    if (welcome) {
+      welcome.style.display = "none";
+    }
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      `message ${role}`;
+
+    if (text) {
+      div.textContent = text;
+    }
+
+    if (image) {
+
+      const img =
+        document.createElement("img");
+
+      img.src = image;
+
+      img.alt = "Uploaded image";
+
+      div.appendChild(img);
+    }
+
+    chat.appendChild(div);
+
+    chat.scrollTop =
+      chat.scrollHeight;
+  }
+
+  // -----------------------------
+  // Save history locally
+  // -----------------------------
+
+  function saveHistory() {
+
+    localStorage.setItem(
+      "naMusammanHistory",
+      JSON.stringify(conversation)
+    );
+  }
+
+  function loadHistory() {
+
+    try {
+
+      const saved =
+        JSON.parse(
+          localStorage.getItem(
+            "naMusammanHistory"
+          )
+        );
+
+      if (Array.isArray(saved)) {
+        conversation = saved;
+      }
+
+    } catch {
+      conversation = [];
+    }
+
+    renderHistory();
+  }
+
+  function renderHistory() {
+
+    historyBox.innerHTML = "";
+
+    const userMessages =
+      conversation.filter(
+        (m) => m.role === "user"
+      );
+
+    userMessages
+      .slice()
+      .reverse()
+      .slice(0, 20)
+      .forEach((item) => {
+
+        const div =
+          document.createElement("div");
+
+        div.className =
+          "history-item";
+
+        div.textContent =
+          item.content ||
+          "Image conversation";
+
+        div.onclick = () => {
+
+          alert(
+            "History cloud sync will be connected with Google Login."
+          );
+        };
+
+        historyBox.appendChild(div);
+      });
+  }
+
+  // -----------------------------
+  // Send message
+  // -----------------------------
+
+  async function sendMessage() {
+
+    const text =
+      messageInput.value.trim();
+
+    if (!text && !selectedImage) {
+      return;
+    }
+
+    const imageToSend =
+      selectedImage;
+
+    addMessage(
+      "user",
+      text,
+      imageToSend
+    );
+
+    conversation.push({
+      role: "user",
+      content: text || "Image uploaded"
+    });
+
+    messageInput.value = "";
+
+    removeImage.click();
+
+    sendBtn.disabled = true;
+
+    sendBtn.textContent = "…";
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/chat",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+              message: text,
+              image: imageToSend,
+              history:
+                conversation.slice(-12)
+            })
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+          "AI connection error."
+        );
+      }
+
+      const answer =
+        data.answer ||
+        "No answer received.";
+
+      addMessage(
+        "assistant",
+        answer
+      );
+
+      conversation.push({
+        role: "assistant",
+        content: answer
+      });
+
+      saveHistory();
+
+      renderHistory();
+
+    } catch (error) {
+
+      addMessage(
+        "assistant",
+        error.message ||
+        "AI connection error. Please try again."
+      );
+
+    } finally {
+
+      sendBtn.disabled = false;
+
+      sendBtn.textContent = "➤";
+    }
+  }
+
+  sendBtn.onclick =
+    sendMessage;
+
+  // -----------------------------
+  // Enter to send
+  // -----------------------------
+
+  messageInput.addEventListener(
+    "keydown",
+    (event) => {
+
+      if (
+        event.key === "Enter" &&
+        !event.shiftKey
+      ) {
+
+        event.preventDefault();
+
+        sendMessage();
+      }
+    }
+  );
+
+  // -----------------------------
+  // New chat
+  // -----------------------------
+
+  newChatBtn.onclick = () => {
+
+    conversation = [];
+
+    localStorage.removeItem(
+      "naMusammanHistory"
+    );
+
+    chat.innerHTML = "";
+
+    chat.appendChild(welcome);
+
+    welcome.style.display =
+      "block";
+
+    renderHistory();
+
+    sidebar.classList.remove(
+      "open"
+    );
+  };
+
+  // -----------------------------
+  // Google Login placeholder
+  // -----------------------------
+
+  loginBtn.onclick = () => {
+
+    alert(
+      "Google Login will be connected in the next step."
+    );
+  };
+
+  // -----------------------------
+  // Settings placeholder
+  // -----------------------------
+
+  settingsBtn.onclick = () => {
+
+    alert(
+      "Settings will be connected in the next step."
+    );
+  };
+
+  // -----------------------------
+  // Start
+  // -----------------------------
+
+  loadHistory();
+</script>
+
+</body>
+</html>
