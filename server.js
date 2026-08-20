@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 3000);
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY;
 
 const GEMINI_MODEL =
   process.env.GEMINI_MODEL ||
@@ -19,7 +20,11 @@ const GEMINI_MODEL =
 const GEMINI_IMAGE_MODEL =
   process.env.GEMINI_IMAGE_MODEL || "";
 
-app.use(express.json({ limit: "15mb" }));
+app.use(
+  express.json({
+    limit: "15mb"
+  })
+);
 
 app.use(
   express.static(
@@ -35,27 +40,31 @@ The interface is English ONLY.
 Answer in the same language used by the user.
 
 Support Hausa, English, Arabic, French,
-Yoruba, Igbo and other languages you can understand.
+Yoruba, Igbo and other languages.
 
-You can help with:
-general questions, education, chemistry,
-translation, summaries, news reports,
-press releases, social media content,
-captions, letters, speeches, ideas,
-image understanding, poster instructions
-and document analysis.
+Help with:
+general questions,
+education,
+chemistry,
+translation,
+summaries,
+news reports,
+press releases,
+social media content,
+captions,
+letters,
+speeches,
+ideas,
+image understanding,
+poster instructions,
+image editing instructions,
+and documents.
 
 When an image and text are provided together,
-understand both the image and the user's instruction.
-
-Never pretend an image has been edited if the
-current image model cannot actually generate
-an edited image.
+understand both the image and the instruction.
 
 Be accurate, clear, respectful and concise.
 `;
-
-// STATUS
 
 app.get("/api/status", (_req, res) => {
 
@@ -69,9 +78,6 @@ app.get("/api/status", (_req, res) => {
   });
 
 });
-
-// MODELS
-
 app.get("/api/models", async (_req, res) => {
 
   try {
@@ -101,7 +107,7 @@ app.get("/api/models", async (_req, res) => {
       ).json({
         error:
           data?.error?.message ||
-          "Could not retrieve Gemini models."
+          "Could not retrieve models."
       });
 
     }
@@ -138,7 +144,6 @@ app.get("/api/models", async (_req, res) => {
 
 });
 
-// CHAT
 
 app.post("/api/chat", async (req, res) => {
 
@@ -183,8 +188,7 @@ app.post("/api/chat", async (req, res) => {
       const item of history.slice(-10)
     ) {
 
-      if (!item?.content)
-        continue;
+      if (!item?.content) continue;
 
       contents.push({
 
@@ -196,9 +200,7 @@ app.post("/api/chat", async (req, res) => {
         parts: [
           {
             text:
-              String(
-                item.content
-              )
+              String(item.content)
           }
         ]
 
@@ -206,19 +208,17 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-    const parts = [];
-
-    parts.push({
-
-      text:
-        SYSTEM_PROMPT +
-        "\n\nUSER MESSAGE:\n" +
-        (
-          message ||
-          "Please analyze this image."
-        )
-
-    });
+    const parts = [
+      {
+        text:
+          SYSTEM_PROMPT +
+          "\n\nUSER MESSAGE:\n" +
+          (
+            message ||
+            "Please analyze this image."
+          )
+      }
+    ];
 
     if (image) {
 
@@ -367,11 +367,6 @@ app.post("/api/chat", async (req, res) => {
   }
 
 });
-
-// ========================================
-// IMAGE / POSTER
-// ========================================
-
 app.post("/api/image", async (req, res) => {
 
   try {
@@ -646,38 +641,18 @@ explicitly asks for them to change.`
   }
 
 });
+app.use((_req, res) => {
+  res.sendFile(
+    path.join(
+      __dirname,
+      "public",
+      "index.html"
+    )
+  );
+});
 
-
-// ========================================
-// FRONTEND
-// ========================================
-
-app.use(
-  (_req, res) => {
-
-    res.sendFile(
-      path.join(
-        __dirname,
-        "public",
-        "index.html"
-      )
-    );
-
-  }
-);
-
-
-// ========================================
-// START SERVER
-// ========================================
-
-app.listen(
-  PORT,
-  () => {
-
-    console.log(
-      `NA MUSAMMAN AI GLOBAL running on port ${PORT}`
-    );
-
-  }
-);
+app.listen(PORT, () => {
+  console.log(
+    `NA MUSAMMAN AI GLOBAL running on port ${PORT}`
+  );
+});
