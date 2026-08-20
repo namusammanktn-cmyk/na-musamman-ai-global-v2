@@ -1,6 +1,6 @@
 import "dotenv/config";
 import express from "express";
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -11,23 +11,13 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 3000);
 
-const client = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
+const genAI = process.env.GEMINI_API_KEY
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
 
-app.use(
-  express.json({
-    limit: "15mb"
-  })
-);
-
-app.use(
-  express.static(
-    path.join(__dirname, "public")
-  )
-);
+const MODEL =
+  process.env.GEMINI_MODEL ||
+  "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `
 You are NA MUSAMMAN AI GLOBAL, a helpful multilingual AI assistant.
@@ -39,7 +29,7 @@ Answer in the same language used by the user:
 - English → English
 - Mixed Hausa/English → natural mixed-language response.
 
-You can analyze uploaded images.
+You can understand and analyze uploaded images.
 
 Be accurate, clear, respectful and concise.
 
@@ -54,18 +44,32 @@ Help with:
 - Image understanding
 - Ideas and explanations
 
-Do not claim to have live news unless live browsing is connected.
+Do not claim to have live news unless live browsing is actually connected.
 `;
 
+app.use(
+  express.json({
+    limit: "15mb"
+  })
+);
+
+app.use(
+  express.static(
+    path.join(__dirname, "public")
+  )
+);
+
+// Status
 app.get("/api/status", (_req, res) => {
   res.json({
     ok: true,
     app: "NA MUSAMMAN AI GLOBAL",
-    configured: Boolean(client),
-    model: process.env.OPENAI_MODEL || "gpt-5-mini"
+    configured: Boolean(genAI),
+    model: MODEL
   });
 });
 
+// AI Chat
 app.post("/api/chat", async (req, res) => {
   try {
     const message = String(
@@ -87,73 +91,85 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    if (!client) {
+    if (!genAI) {
       return res.status(503).json({
         error:
-          "OpenAI API key is not configured."
+          "Gemini API key is not configured."
       });
     }
 
-    const previousMessages = history
-      .slice(-12)
-      .map((item) => ({
-        role:
-          item?.role === "assistant"
-            ? "assistant"
-            : "user",
-        content: String(
-          item?.content || ""
-        )
-      }));
+    const model = genAI.getGenerativeModel({
+      model: MODEL,
+      systemInstruction: SYSTEM_PROMPT
+    });
 
-    const userContent = [];
+    const contents = [];
+
+    for (
+      const item of history.slice(-10)
+    ) {
+      if (!item?.content) continue;
+
+      contents.push({
+        role:
+          item.role === "assistant"
+            ? "model"
+            : "user",
+        parts: [
+          {
+            text: String(
+              item.content
+            )
+          }
+        ]
+      });
+    }
+
+    const currentParts = [];
 
     if (message) {
-      userContent.push({
-        type: "input_text",
+      currentParts.push({
         text: message
       });
     }
 
     if (image) {
-      userContent.push({
-        type: "input_image",
-        image_url: image
-      });
+      const match =
+        image.match(
+          /^data:(image\/[^;]+);base64,(.+)$/
+        );
+
+      if (match) {
+        currentParts.push({
+          inlineData: {
+            mimeType: match[1],
+            data: match[2]
+          }
+        });
+      }
     }
 
-    const input = [
-      {
-        role: "developer",
-        content: SYSTEM_PROMPT
-      },
+    contents.push({
+      role: "user",
+      parts: currentParts
+    });
 
-      ...previousMessages,
-
-      {
-        role: "user",
-        content: userContent
-      }
-    ];
-
-    const response =
-      await client.responses.create({
-        model:
-          process.env.OPENAI_MODEL ||
-          "gpt-5-mini",
-        input
+    const result =
+      await model.generateContent({
+        contents
       });
+
+    const answer =
+      result.response.text();
 
     res.json({
       ok: true,
-      answer:
-        response.output_text ||
-        "No answer received."
+      answer
     });
 
   } catch (error) {
     console.error(
-      "AI request failed:",
+      "Gemini request failed:",
       error?.message || error
     );
 
@@ -165,14 +181,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-/*
-  IMPORTANT:
-  Express 5 does not support app.get("*")
-  in the old Express 4 style.
-
-  We use app.use() instead.
-*/
-
+// Frontend
 app.use((_req, res) => {
   res.sendFile(
     path.join(
