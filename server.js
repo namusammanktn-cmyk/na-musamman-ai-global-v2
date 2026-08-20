@@ -10,8 +10,7 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 3000);
 
-const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const GEMINI_MODEL =
   process.env.GEMINI_MODEL ||
@@ -20,16 +19,7 @@ const GEMINI_MODEL =
 const GEMINI_IMAGE_MODEL =
   process.env.GEMINI_IMAGE_MODEL || "";
 
-
-// ========================================
-// APP SETTINGS
-// ========================================
-
-app.use(
-  express.json({
-    limit: "15mb"
-  })
-);
+app.use(express.json({ limit: "15mb" }));
 
 app.use(
   express.static(
@@ -37,81 +27,35 @@ app.use(
   )
 );
 
-
-// ========================================
-// SYSTEM PROMPT
-// ========================================
-
 const SYSTEM_PROMPT = `
 You are NA MUSAMMAN AI GLOBAL.
 
-You are a helpful multilingual AI assistant.
+The interface is English ONLY.
 
-The application interface is English ONLY.
-
-IMPORTANT LANGUAGE RULE:
 Answer in the same language used by the user.
 
-If the user writes Hausa:
-Answer in simple natural Hausa.
-
-If the user writes English:
-Answer in English.
-
-If the user writes Arabic:
-Answer in Arabic.
-
-If the user writes French:
-Answer in French.
-
-If the user writes Yoruba:
-Answer in Yoruba.
-
-If the user writes Igbo:
-Answer in Igbo.
-
-If the user uses another language:
-Answer in that language when possible.
-
-If the user mixes languages:
-Understand the mixed language naturally.
+Support Hausa, English, Arabic, French,
+Yoruba, Igbo and other languages you can understand.
 
 You can help with:
+general questions, education, chemistry,
+translation, summaries, news reports,
+press releases, social media content,
+captions, letters, speeches, ideas,
+image understanding, poster instructions
+and document analysis.
 
-- General questions
-- Education
-- Chemistry
-- School work
-- Translation
-- Summaries
-- News reports
-- Press releases
-- Social media content
-- Captions
-- Letters
-- Speeches
-- Ideas
-- Image understanding
-- Poster ideas
-- Image editing instructions
-- Document analysis
+When an image and text are provided together,
+understand both the image and the user's instruction.
 
-You can analyze uploaded images.
-
-IMPORTANT:
-If the user uploads an image together with a written instruction,
-understand BOTH the image and the instruction.
-
-Do not pretend that an image has been edited if the current
-image model cannot actually generate an edited image.
+Never pretend an image has been edited if the
+current image model cannot actually generate
+an edited image.
 
 Be accurate, clear, respectful and concise.
 `;
 
-
-// ========================================
 // STATUS
-// ========================================
 
 app.get("/api/status", (_req, res) => {
 
@@ -126,10 +70,75 @@ app.get("/api/status", (_req, res) => {
 
 });
 
+// MODELS
 
-// ========================================
-// GEMINI CHAT
-// ========================================
+app.get("/api/models", async (_req, res) => {
+
+  try {
+
+    if (!GEMINI_API_KEY) {
+
+      return res.status(503).json({
+        error:
+          "Gemini API key is not configured."
+      });
+
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(
+        GEMINI_API_KEY
+      )}`
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+
+      return res.status(
+        response.status
+      ).json({
+        error:
+          data?.error?.message ||
+          "Could not retrieve Gemini models."
+      });
+
+    }
+
+    const models =
+      (data.models || []).map(
+        (model) => ({
+          name: model.name,
+          displayName:
+            model.displayName,
+          supportedGenerationMethods:
+            model.supportedGenerationMethods
+        })
+      );
+
+    res.json({
+      ok: true,
+      models
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Model list error:",
+      error?.message || error
+    );
+
+    res.status(500).json({
+      error:
+        "Could not retrieve models."
+    });
+
+  }
+
+});
+
+// CHAT
 
 app.post("/api/chat", async (req, res) => {
 
@@ -144,10 +153,11 @@ app.post("/api/chat", async (req, res) => {
       req.body?.image || null;
 
     const history =
-      Array.isArray(req.body?.history)
+      Array.isArray(
+        req.body?.history
+      )
         ? req.body.history
         : [];
-
 
     if (!message && !image) {
 
@@ -158,7 +168,6 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-
     if (!GEMINI_API_KEY) {
 
       return res.status(503).json({
@@ -168,18 +177,14 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-
     const contents = [];
 
-
-    // Previous conversation
     for (
       const item of history.slice(-10)
     ) {
 
       if (!item?.content)
         continue;
-
 
       contents.push({
 
@@ -201,11 +206,7 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-
-    // Current message
-
     const parts = [];
-
 
     parts.push({
 
@@ -219,16 +220,12 @@ app.post("/api/chat", async (req, res) => {
 
     });
 
-
-    // Current image
-
     if (image) {
 
       const match =
         image.match(
           /^data:(image\/[^;]+);base64,(.+)$/
         );
-
 
       if (match) {
 
@@ -250,7 +247,6 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-
     contents.push({
 
       role: "user",
@@ -259,14 +255,12 @@ app.post("/api/chat", async (req, res) => {
 
     });
 
-
     const url =
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         GEMINI_MODEL
       )}:generateContent?key=${encodeURIComponent(
         GEMINI_API_KEY
       )}`;
-
 
     const response =
       await fetch(
@@ -276,10 +270,8 @@ app.post("/api/chat", async (req, res) => {
           method: "POST",
 
           headers: {
-
             "Content-Type":
               "application/json"
-
           },
 
           body:
@@ -301,10 +293,8 @@ app.post("/api/chat", async (req, res) => {
         }
       );
 
-
     const data =
       await response.json();
-
 
     if (!response.ok) {
 
@@ -312,7 +302,6 @@ app.post("/api/chat", async (req, res) => {
         "Gemini API error:",
         JSON.stringify(data)
       );
-
 
       return res.status(
         response.status
@@ -328,18 +317,15 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-
     const answer =
-      data
-        ?.candidates?.[0]
+      data?.candidates?.[0]
         ?.content?.parts
         ?.map(
-          part =>
+          (part) =>
             part.text || ""
         )
         .join("")
         .trim();
-
 
     if (!answer) {
 
@@ -354,7 +340,6 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-
     res.json({
 
       ok: true,
@@ -363,14 +348,12 @@ app.post("/api/chat", async (req, res) => {
 
     });
 
-
   } catch (error) {
 
     console.error(
       "Gemini connection failed:",
       error?.message || error
     );
-
 
     res.status(500).json({
 
@@ -383,11 +366,8 @@ app.post("/api/chat", async (req, res) => {
 
   }
 
-});
-
-
-// ========================================
-// AI IMAGE / POSTER
+});// ========================================
+// IMAGE / POSTER
 // ========================================
 
 app.post("/api/image", async (req, res) => {
@@ -409,10 +389,8 @@ app.post("/api/image", async (req, res) => {
     if (!prompt) {
 
       return res.status(400).json({
-
         error:
           "Please describe what you want."
-
       });
 
     }
@@ -421,10 +399,8 @@ app.post("/api/image", async (req, res) => {
     if (!GEMINI_API_KEY) {
 
       return res.status(503).json({
-
         error:
           "Gemini API key is not configured."
-
       });
 
     }
@@ -433,10 +409,8 @@ app.post("/api/image", async (req, res) => {
     if (!GEMINI_IMAGE_MODEL) {
 
       return res.status(503).json({
-
         error:
           "GEMINI_IMAGE_MODEL is not configured yet."
-
       });
 
     }
@@ -444,8 +418,6 @@ app.post("/api/image", async (req, res) => {
 
     const parts = [];
 
-
-    // Poster instruction
 
     if (mode === "poster") {
 
@@ -466,19 +438,13 @@ text, layout, colors and style.`
 
       });
 
-    }
-
-    // Image editing instruction
-
-    else {
+    } else {
 
       parts.push({
 
         text:
           `Edit the uploaded image according
-to the user's instruction.
-
-User instruction:
+to this instruction:
 
 ${prompt}
 
@@ -490,8 +456,6 @@ explicitly asks for them to change.`
 
     }
 
-
-    // Add uploaded image
 
     if (image) {
 
@@ -602,16 +566,13 @@ explicitly asks for them to change.`
 
 
     const outputParts =
-      data
-        ?.candidates?.[0]
+      data?.candidates?.[0]
         ?.content?.parts || [];
 
 
-    // Find generated image
-
     const imagePart =
       outputParts.find(
-        part =>
+        (part) =>
           part.inlineData ||
           part.inline_data
       );
@@ -622,7 +583,7 @@ explicitly asks for them to change.`
       const text =
         outputParts
           .map(
-            part =>
+            (part) =>
               part.text || ""
           )
           .join("")
@@ -653,16 +614,12 @@ explicitly asks for them to change.`
       "image/png";
 
 
-    const base64 =
-      imageData.data;
-
-
     res.json({
 
       ok: true,
 
       image:
-        `data:${mimeType};base64,${base64}`
+        `data:${mimeType};base64,${imageData.data}`
 
     });
 
