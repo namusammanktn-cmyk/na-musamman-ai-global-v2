@@ -1,15 +1,15 @@
 {
   "name": "na-musamman-ai-global",
-  "version": "2.0.0",
-  "description": "NA MUSAMMAN AI GLOBAL - Multilingual AI Assistant",
+  "version": "3.0.0",
+  "description": "NA MUSAMMAN AI GLOBAL - Gemini AI Assistant",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "dotenv": "^16.4.7",
-    "express": "^5.1.0",
-    "openai": "^5.12.0"
+    "express": "^5.1.0"
   }
 }
