@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>AI Image & Poster | NA MUSAMMAN AI GLOBAL</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #07152f;
+      color: white;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 25px;
+    }
+
+    h1 {
+      color: #28c7ff;
+      text-align: center;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #9eb4d2;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: #0b2245;
+      border: 1px solid #1a4774;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .mode {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .mode button {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #1a4774;
+      border-radius: 10px;
+      background: #07152f;
+      color: white;
+      cursor: pointer;
+    }
+
+    .mode button.active {
+      background: #159bd2;
+    }
+
+    .upload {
+      border: 2px dashed #278ac0;
+      border-radius: 14px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    #preview {
+      display: none;
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      border-radius: 14px;
+      margin-bottom: 15px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      resize: vertical;
+      background: #07152f;
+      border: 1px solid #1a4774;
+      border-radius: 12px;
+      padding: 14px;
+      color: white;
+      outline: none;
+      font-size: 15px;
+      margin-bottom: 15px;
+    }
+
+    textarea::placeholder {
+      color: #7792b5;
+    }
+
+    .generate {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 12px;
+      background: #159bd2;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .generate:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    #result {
+      display: none;
+      margin-top: 20px;
+    }
+
+    #result img {
+      width: 100%;
+      border-radius: 14px;
+    }
+
+    .status {
+      color: #9eb4d2;
+      text-align: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>✦ NA MUSAMMAN AI GLOBAL</h1>
+
+  <p class="subtitle">
+    AI Image Editing & Poster Creator
+  </p>
+
+  <div class="card">
+
+    <div class="mode">
+      <button id="editMode" class="active">
+        🖼️ Edit Image
+      </button>
+
+      <button id="posterMode">
+        🪧 Create Poster
+      </button>
+    </div>
+
+    <label class="upload" for="imageInput">
+      📎 Upload Image
+      <br>
+      <small>Choose an image from your device</small>
+    </label>
+
+    <input
+      type="file"
+      id="imageInput"
+      accept="image/*"
+    >
+
+    <img
+      id="preview"
+      alt="Image preview"
+    >
+
+    <textarea
+      id="prompt"
+      placeholder="Describe what you want to create or edit...
+
+Example:
+Change the background to light blue.
+Keep the person unchanged.
+
+Or:
+Create a professional congratulations poster.
+Use a white and light-blue luxury design."
+    ></textarea>
+
+    <button
+      class="generate"
+      id="generateBtn"
+    >
+      ✨ Generate / Edit
+    </button>
+
+    <div
+      class="status"
+      id="status"
+    ></div>
+
+    <div id="result">
+      <h3>Result</h3>
+      <img id="resultImage" alt="Generated result">
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+const imageInput =
+  document.getElementById("imageInput");
+
+const preview =
+  document.getElementById("preview");
+
+const promptInput =
+  document.getElementById("prompt");
+
+const generateBtn =
+  document.getElementById("generateBtn");
+
+const status =
+  document.getElementById("status");
+
+const result =
+  document.getElementById("result");
+
+const resultImage =
+  document.getElementById("resultImage");
+
+let selectedImage = null;
+let mode = "edit";
+
+document.getElementById("editMode").onclick = () => {
+
+  mode = "edit";
+
+  document
+    .getElementById("editMode")
+    .classList.add("active");
+
+  document
+    .getElementById("posterMode")
+    .classList.remove("active");
+
+};
+
+document.getElementById("posterMode").onclick = () => {
+
+  mode = "poster";
+
+  document
+    .getElementById("posterMode")
+    .classList.add("active");
+
+  document
+    .getElementById("editMode")
+    .classList.remove("active");
+
+};
+
+imageInput.onchange = () => {
+
+  const file = imageInput.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+
+    selectedImage = reader.result;
+
+    preview.src = selectedImage;
+
+    preview.style.display = "block";
+
+  };
+
+  reader.readAsDataURL(file);
+
+};
+
+generateBtn.onclick = async () => {
+
+  const prompt =
+    promptInput.value.trim();
+
+  if (!prompt) {
+
+    alert(
+      "Please describe what you want."
+    );
+
+    return;
+  }
+
+  generateBtn.disabled = true;
+
+  status.textContent =
+    "Preparing your request...";
+
+  try {
+
+    const response =
+      await fetch("/api/image", {
+
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+
+          mode,
+
+          prompt,
+
+          image: selectedImage
+
+        })
+
+      });
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        "Image generation failed."
+      );
+
+    }
+
+    if (data.image) {
+
+      resultImage.src =
+        data.image;
+
+      result.style.display =
+        "block";
+
+      status.textContent =
+        "Done.";
+
+    } else {
+
+      status.textContent =
+        data.message ||
+        "The request was received.";
+
+    }
+
+  } catch (error) {
+
+    status.textContent =
+      error.message ||
+      "Image generation failed.";
+
+  } finally {
+
+    generateBtn.disabled = false;
+
+  }
+
+};
+
+</script>
+
+</body>
+</html>
