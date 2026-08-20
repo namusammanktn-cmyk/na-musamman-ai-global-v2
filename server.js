@@ -15,34 +15,35 @@ const GEMINI_API_KEY =
 
 const GEMINI_MODEL =
   process.env.GEMINI_MODEL ||
-  "gemini-3.6-flash";
+  "gemini-3.5-flash-lite";
 
 const SYSTEM_PROMPT = `
-You are NA MUSAMMAN AI GLOBAL, a helpful multilingual AI assistant.
+You are NA MUSAMMAN AI GLOBAL.
 
-The application interface is English ONLY.
+The app interface is English ONLY.
 
 Answer in the same language used by the user:
-- Hausa → simple natural Hausa.
+- Hausa → simple Hausa.
 - English → English.
-- Mixed Hausa/English → understand and respond naturally.
+- Mixed Hausa/English → natural mixed response.
 
-You can understand and analyze uploaded images.
+You can analyze uploaded images.
 
-Be accurate, clear, respectful and concise.
+IMPORTANT:
+When a user uploads an image and writes an instruction,
+understand BOTH the image and the written instruction.
 
-You can help with:
-- General questions
-- Education and school work
-- Chemistry
-- Translation
-- Summaries
-- News writing
-- Social media content
-- Image understanding
-- Ideas and explanations
+For example:
+"Change the background to light blue."
 
-Do not claim to have live news unless live browsing is actually connected.
+You should explain what can be done and follow the user's
+instruction as closely as possible.
+
+If the current model cannot directly edit or generate an image,
+clearly explain that limitation instead of pretending that
+the image was edited.
+
+Be accurate, respectful and concise.
 `;
 
 app.use(
@@ -57,9 +58,7 @@ app.use(
   )
 );
 
-// -----------------------------
-// Status
-// -----------------------------
+// STATUS
 
 app.get("/api/status", (_req, res) => {
   res.json({
@@ -70,9 +69,7 @@ app.get("/api/status", (_req, res) => {
   });
 });
 
-// -----------------------------
-// Gemini Chat
-// -----------------------------
+// CHAT
 
 app.post("/api/chat", async (req, res) => {
   try {
@@ -104,7 +101,8 @@ app.post("/api/chat", async (req, res) => {
 
     const contents = [];
 
-    // Previous conversation
+    // Previous messages
+
     for (
       const item of history.slice(-10)
     ) {
@@ -115,6 +113,7 @@ app.post("/api/chat", async (req, res) => {
           item.role === "assistant"
             ? "model"
             : "user",
+
         parts: [
           {
             text: String(
@@ -126,28 +125,37 @@ app.post("/api/chat", async (req, res) => {
     }
 
     // Current message
+
     const parts = [];
 
     parts.push({
       text:
         SYSTEM_PROMPT +
-        "\n\nUser message:\n" +
-        (message || "Please analyze this image.")
+        "\n\nUSER INSTRUCTION:\n" +
+        (
+          message ||
+          "Please analyze this image."
+        )
     });
 
-    // Image
+    // Current image
+
     if (image) {
-      const match = image.match(
-        /^data:(image\/[^;]+);base64,(.+)$/
-      );
+
+      const match =
+        image.match(
+          /^data:(image\/[^;]+);base64,(.+)$/
+        );
 
       if (match) {
+
         parts.push({
           inline_data: {
             mime_type: match[1],
             data: match[2]
           }
         });
+
       }
     }
 
@@ -163,34 +171,38 @@ app.post("/api/chat", async (req, res) => {
         GEMINI_API_KEY
       )}`;
 
-    const response = await fetch(url, {
-      method: "POST",
+    const response =
+      await fetch(url, {
+        method: "POST",
 
-      headers: {
-        "Content-Type":
-          "application/json"
-      },
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
 
-      body: JSON.stringify({
-        contents,
+        body: JSON.stringify({
+          contents,
 
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048
-        }
-      })
-    });
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048
+          }
+        })
+      });
 
     const data =
       await response.json();
 
     if (!response.ok) {
+
       console.error(
         "Gemini API error:",
         JSON.stringify(data)
       );
 
-      return res.status(response.status).json({
+      return res.status(
+        response.status
+      ).json({
         ok: false,
         error:
           data?.error?.message ||
@@ -198,64 +210,4 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const answer =
-      data?.candidates?.[0]?.content?.parts
-        ?.map((part) => part.text || "")
-        .join("")
-        .trim();
-
-    if (!answer) {
-      console.error(
-        "Gemini returned no text:",
-        JSON.stringify(data)
-      );
-
-      return res.status(500).json({
-        ok: false,
-        error:
-          "Gemini returned no answer."
-      });
-    }
-
-    res.json({
-      ok: true,
-      answer
-    });
-
-  } catch (error) {
-    console.error(
-      "Gemini connection failed:",
-      error?.message || error
-    );
-
-    res.status(500).json({
-      ok: false,
-      error:
-        "AI connection error. Please try again."
-    });
-  }
-});
-
-// -----------------------------
-// Frontend
-// -----------------------------
-
-app.use((_req, res) => {
-  res.sendFile(
-    path.join(
-      __dirname,
-      "public",
-      "index.html"
-    )
-  );
-});
-
-// -----------------------------
-// Start server
-// -----------------------------
-
-app.listen(PORT, () => {
-  console.log(
-    `NA MUSAMMAN AI GLOBAL running on port ${PORT}`
-  );
-});
+   
