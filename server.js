@@ -10,15 +10,20 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 3000);
 
-const GEMINI_API_KEY =
-  process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// Use a current Gemini model.
+// You can override this from Render Environment Variables.
 const GEMINI_MODEL =
-  process.env.GEMINI_MODEL ||
-  "gemini-3.5-flash-lite";
+  process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 const GEMINI_IMAGE_MODEL =
   process.env.GEMINI_IMAGE_MODEL || "";
+
+
+// ======================================
+// MIDDLEWARE
+// ======================================
 
 app.use(
   express.json({
@@ -32,45 +37,65 @@ app.use(
   )
 );
 
+
+// ======================================
+// SYSTEM PROMPT
+// ======================================
+
 const SYSTEM_PROMPT = `
 You are NA MUSAMMAN AI GLOBAL.
 
 The interface is English ONLY.
 
-Answer in the same language used by the user.
+Answer the user in the same language they use.
 
-Support Hausa, English, Arabic, French,
-Yoruba, Igbo and other languages.
+If the user writes Hausa, answer in simple Hausa.
+If the user writes English, answer in English.
+If the user mixes Hausa and English, understand the
+meaning and respond naturally.
 
-Help with:
-general questions,
-education,
-chemistry,
-translation,
-summaries,
-news reports,
-press releases,
-social media content,
-captions,
-letters,
-speeches,
-ideas,
-image understanding,
-poster instructions,
-image editing instructions,
-and documents.
+Support:
+Hausa, English, Arabic, French, Yoruba, Igbo
+and other languages.
 
-When an image and text are provided together,
-understand both the image and the instruction.
+You can help with:
+- General questions
+- Education
+- Chemistry
+- Translation
+- Summaries
+- News reports
+- Press releases
+- Social media content
+- Captions
+- Letters
+- Speeches
+- Ideas
+- Image understanding
+- Poster instructions
+- Image editing instructions
+- Documents
+
+When an image is provided, carefully analyze it
+and follow the user's instruction.
 
 Be accurate, clear, respectful and concise.
+
+Do not pretend to have live news or live internet
+access unless a live browsing tool is actually connected.
 `;
+
+
+// ======================================
+// STATUS
+// ======================================
 
 app.get("/api/status", (_req, res) => {
 
   res.json({
     ok: true,
     app: "NA MUSAMMAN AI GLOBAL",
+    provider: "Google Gemini",
     configured: Boolean(GEMINI_API_KEY),
     model: GEMINI_MODEL,
     imageModel:
@@ -78,6 +103,12 @@ app.get("/api/status", (_req, res) => {
   });
 
 });
+
+
+// ======================================
+// MODELS
+// ======================================
+
 app.get("/api/models", async (_req, res) => {
 
   try {
@@ -85,6 +116,7 @@ app.get("/api/models", async (_req, res) => {
     if (!GEMINI_API_KEY) {
 
       return res.status(503).json({
+        ok: false,
         error:
           "Gemini API key is not configured."
       });
@@ -92,9 +124,15 @@ app.get("/api/models", async (_req, res) => {
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(
-        GEMINI_API_KEY
-      )}`
+      "https://generativelanguage.googleapis.com/v1beta/models",
+      {
+        method: "GET",
+
+        headers: {
+          "x-goog-api-key":
+            GEMINI_API_KEY
+        }
+      }
     );
 
     const data =
@@ -102,12 +140,18 @@ app.get("/api/models", async (_req, res) => {
 
     if (!response.ok) {
 
+      console.error(
+        "Gemini models error:",
+        JSON.stringify(data)
+      );
+
       return res.status(
         response.status
       ).json({
+        ok: false,
         error:
           data?.error?.message ||
-          "Could not retrieve models."
+          "Could not retrieve Gemini models."
       });
 
     }
@@ -118,6 +162,8 @@ app.get("/api/models", async (_req, res) => {
           name: model.name,
           displayName:
             model.displayName,
+          description:
+            model.description,
           supportedGenerationMethods:
             model.supportedGenerationMethods
         })
@@ -131,19 +177,24 @@ app.get("/api/models", async (_req, res) => {
   } catch (error) {
 
     console.error(
-      "Model list error:",
+      "Models connection failed:",
       error?.message || error
     );
 
     res.status(500).json({
+      ok: false,
       error:
-        "Could not retrieve models."
+        "Could not retrieve Gemini models."
     });
 
   }
 
 });
 
+
+// ======================================
+// CHAT
+// ======================================
 
 app.post("/api/chat", async (req, res) => {
 
@@ -164,23 +215,40 @@ app.post("/api/chat", async (req, res) => {
         ? req.body.history
         : [];
 
+
+    // ----------------------------------
+    // Validate request
+    // ----------------------------------
+
     if (!message && !image) {
 
       return res.status(400).json({
+        ok: false,
         error:
           "Please enter a message or upload an image."
       });
 
     }
 
+
+    // ----------------------------------
+    // Check API key
+    // ----------------------------------
+
     if (!GEMINI_API_KEY) {
 
       return res.status(503).json({
+        ok: false,
         error:
           "Gemini API key is not configured."
       });
 
     }
+
+
+    // ==================================
+    // CONVERSATION HISTORY
+    // ==================================
 
     const contents = [];
 
@@ -188,14 +256,21 @@ app.post("/api/chat", async (req, res) => {
       const item of history.slice(-10)
     ) {
 
-      if (!item?.content) continue;
+      if (
+        !item ||
+        !item.content
+      ) {
+        continue;
+      }
+
+      const role =
+        item.role === "assistant"
+          ? "model"
+          : "user";
 
       contents.push({
 
-        role:
-          item.role === "assistant"
-            ? "model"
-            : "user",
+        role,
 
         parts: [
           {
@@ -208,17 +283,26 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
-    const parts = [
-      {
-        text:
-          SYSTEM_PROMPT +
-          "\n\nUSER MESSAGE:\n" +
-          (
-            message ||
-            "Please analyze this image."
-          )
-      }
-    ];
+
+    // ==================================
+    // CURRENT USER MESSAGE
+    // ==================================
+
+    const parts = [];
+
+
+    parts.push({
+
+      text:
+        message ||
+        "Please analyze this image."
+
+    });
+
+
+    // ==================================
+    // IMAGE
+    // ==================================
 
     if (image) {
 
@@ -227,25 +311,37 @@ app.post("/api/chat", async (req, res) => {
           /^data:(image\/[^;]+);base64,(.+)$/
         );
 
-      if (match) {
 
-        parts.push({
+      if (!match) {
 
-          inline_data: {
+        return res.status(400).json({
 
-            mime_type:
-              match[1],
+          ok: false,
 
-            data:
-              match[2]
-
-          }
+          error:
+            "Invalid image format."
 
         });
 
       }
 
+
+      parts.push({
+
+        inline_data: {
+
+          mime_type:
+            match[1],
+
+          data:
+            match[2]
+
+        }
+
+      });
+
     }
+
 
     contents.push({
 
@@ -255,12 +351,16 @@ app.post("/api/chat", async (req, res) => {
 
     });
 
+
+    // ==================================
+    // GEMINI REQUEST
+    // ==================================
+
     const url =
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         GEMINI_MODEL
-      )}:generateContent?key=${encodeURIComponent(
-        GEMINI_API_KEY
-      )}`;
+      )}:generateContent`;
+
 
     const response =
       await fetch(
@@ -270,12 +370,28 @@ app.post("/api/chat", async (req, res) => {
           method: "POST",
 
           headers: {
+
             "Content-Type":
-              "application/json"
+              "application/json",
+
+            "x-goog-api-key":
+              GEMINI_API_KEY
+
           },
 
           body:
             JSON.stringify({
+
+              systemInstruction: {
+
+                parts: [
+                  {
+                    text:
+                      SYSTEM_PROMPT
+                  }
+                ]
+
+              },
 
               contents,
 
@@ -293,8 +409,14 @@ app.post("/api/chat", async (req, res) => {
         }
       );
 
+
     const data =
       await response.json();
+
+
+    // ==================================
+    // GEMINI ERROR
+    // ==================================
 
     if (!response.ok) {
 
@@ -317,6 +439,11 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
+
+    // ==================================
+    // EXTRACT ANSWER
+    // ==================================
+
     const answer =
       data?.candidates?.[0]
         ?.content?.parts
@@ -327,7 +454,13 @@ app.post("/api/chat", async (req, res) => {
         .join("")
         .trim();
 
+
     if (!answer) {
+
+      console.error(
+        "Gemini returned:",
+        JSON.stringify(data)
+      );
 
       return res.status(500).json({
 
@@ -340,6 +473,11 @@ app.post("/api/chat", async (req, res) => {
 
     }
 
+
+    // ==================================
+    // SUCCESS
+    // ==================================
+
     res.json({
 
       ok: true,
@@ -347,6 +485,7 @@ app.post("/api/chat", async (req, res) => {
       answer
 
     });
+
 
   } catch (error) {
 
@@ -367,6 +506,12 @@ app.post("/api/chat", async (req, res) => {
   }
 
 });
+
+
+// ======================================
+// IMAGE GENERATION / EDITING
+// ======================================
+
 app.post("/api/image", async (req, res) => {
 
   try {
@@ -386,8 +531,12 @@ app.post("/api/image", async (req, res) => {
     if (!prompt) {
 
       return res.status(400).json({
+
+        ok: false,
+
         error:
           "Please describe what you want."
+
       });
 
     }
@@ -396,8 +545,12 @@ app.post("/api/image", async (req, res) => {
     if (!GEMINI_API_KEY) {
 
       return res.status(503).json({
+
+        ok: false,
+
         error:
           "Gemini API key is not configured."
+
       });
 
     }
@@ -406,8 +559,12 @@ app.post("/api/image", async (req, res) => {
     if (!GEMINI_IMAGE_MODEL) {
 
       return res.status(503).json({
+
+        ok: false,
+
         error:
-          "GEMINI_IMAGE_MODEL is not configured yet."
+          "GEMINI_IMAGE_MODEL is not configured."
+
       });
 
     }
@@ -415,6 +572,10 @@ app.post("/api/image", async (req, res) => {
 
     const parts = [];
 
+
+    // ----------------------------------
+    // Poster
+    // ----------------------------------
 
     if (mode === "poster") {
 
@@ -430,12 +591,18 @@ ${prompt}
 Make the design clean, modern,
 professional and suitable for social media.
 
-Follow the user's requested language,
+Follow the requested language,
 text, layout, colors and style.`
 
       });
 
-    } else {
+    }
+
+    // ----------------------------------
+    // Image editing
+    // ----------------------------------
+
+    else {
 
       parts.push({
 
@@ -445,14 +612,18 @@ to this instruction:
 
 ${prompt}
 
-Preserve the person's identity and
-important details unless the user
-explicitly asks for them to change.`
+Preserve important details unless
+the user explicitly asks for them
+to be changed.`
 
       });
 
     }
 
+
+    // ----------------------------------
+    // Uploaded image
+    // ----------------------------------
 
     if (image) {
 
@@ -483,17 +654,15 @@ explicitly asks for them to change.`
     }
 
 
-    const url =
+    const imageUrl =
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         GEMINI_IMAGE_MODEL
-      )}:generateContent?key=${encodeURIComponent(
-        GEMINI_API_KEY
-      )}`;
+      )}:generateContent`;
 
 
     const response =
       await fetch(
-        url,
+        imageUrl,
         {
 
           method: "POST",
@@ -501,7 +670,10 @@ explicitly asks for them to change.`
           headers: {
 
             "Content-Type":
-              "application/json"
+              "application/json",
+
+            "x-goog-api-key":
+              GEMINI_API_KEY
 
           },
 
@@ -545,7 +717,6 @@ explicitly asks for them to change.`
         "Gemini image error:",
         JSON.stringify(data)
       );
-
 
       return res.status(
         response.status
@@ -628,7 +799,6 @@ explicitly asks for them to change.`
       error?.message || error
     );
 
-
     res.status(500).json({
 
       ok: false,
@@ -641,7 +811,14 @@ explicitly asks for them to change.`
   }
 
 });
+
+
+// ======================================
+// FRONTEND FALLBACK
+// ======================================
+
 app.use((_req, res) => {
+
   res.sendFile(
     path.join(
       __dirname,
@@ -649,10 +826,18 @@ app.use((_req, res) => {
       "index.html"
     )
   );
+
 });
 
+
+// ======================================
+// START SERVER
+// ======================================
+
 app.listen(PORT, () => {
+
   console.log(
     `NA MUSAMMAN AI GLOBAL running on port ${PORT}`
   );
+
 });
